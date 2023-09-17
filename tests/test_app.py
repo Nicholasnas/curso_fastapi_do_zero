@@ -11,7 +11,7 @@ def cliente():
     return TestClient(app)   # Arrange
 
 
-def test_create_user(cliente):
+def test_create_user_app(cliente):
 
     resposta = cliente.post(
         '/users/',
@@ -30,7 +30,7 @@ def test_create_user(cliente):
     }
 
 
-def test_retorna_users(cliente):
+def test_retorna_users_app(cliente):
 
     response = cliente.get('/users/')  # Act
 
@@ -47,7 +47,7 @@ def test_retorna_users(cliente):
     }
 
 
-def test_update_user(cliente):
+def test_update_user_app(cliente):
     resposta = cliente.put(
         '/users/1',
         json={
@@ -65,7 +65,7 @@ def test_update_user(cliente):
     }
 
 
-def test_delete_user(cliente):
+def test_delete_user_app(cliente):
     resposta = cliente.delete('/users/1')
 
     assert resposta.status_code == 200

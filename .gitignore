@@ -1,0 +1,10 @@
+.venv
+.ruff_cache
+.pytest_cache
+*__pycache__
+.coverage
+.gitignore
+.vscode
+database.db
+.env
+
