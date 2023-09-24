@@ -1,40 +1,88 @@
-from fastapi import FastAPI, HTTPException
+from typing import Annotated
 
-from fast_zero.schemas import Message, UserDB, UserList, UserPublic, UserSchema
+from fastapi import Depends, FastAPI, HTTPException
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from fast_zero.database import get_session
+from fast_zero.models import User
+from fast_zero.schemas import Message, UserList, UserPublic, UserSchema
 
 app = FastAPI()
-
 database = []
 
 
 @app.get('/users/', response_model=UserList)
-async def retorna_usuarios():
-    return {'users': database}
+async def retorna_usuarios(
+    session: Annotated[Session, Depends(get_session)],
+    skip: int = 0,
+    limit: int = 100,
+):
+
+    query = select(User).offset(skip).limit(limit)
+    usuarios_db = session.scalars(query).all()
+
+    return {'users': usuarios_db}
 
 
 @app.post('/users/', status_code=201, response_model=UserPublic)
-async def criar_usuario(user: UserSchema):
-    usuario_id = UserDB(**user.model_dump(), id=len(database) + 1)
+async def criar_usuario(
+    user: UserSchema, session: Annotated[Session, Depends(get_session)]
+):
+    # Verifica se o usuario já existe no banco
+    query = select(User).where(User.username == user.username)
+    db_user = session.scalar(query)
 
-    database.append(usuario_id)
+    if db_user:
+        raise HTTPException(
+            status_code=400, detail='Usuário já foi registrado'
+        )
 
-    return usuario_id
+    db_user = User(
+        username=user.username, password=user.password, email=user.email
+    )
+    session.add(db_user)
+    session.commit()
+    session.refresh(db_user)
+
+    return db_user
 
 
 @app.put('/users/{user_id}', response_model=UserPublic, status_code=200)
-async def put_usuario(user_id: int, user: UserSchema):
-    if user_id > len(database) or user_id < 1:
+async def put_usuario(
+    user_id: int,
+    user: UserSchema,
+    session: Annotated[Session, Depends(get_session)],
+):
+
+    query = select(User).where(User.id == user_id)
+    db_user = session.scalar(query)
+
+    if db_user is None:
         raise HTTPException(status_code=404, detail='User não encontrado')
 
-    usuario_id = UserDB(**user.model_dump(), id=user_id)
-    database[user_id - 1] = usuario_id
-    return usuario_id
+    db_user.username = user.username
+    db_user.email = user.email
+    db_user.password = user.password
+    session.commit()
+    session.refresh(db_user)
+
+    return db_user
 
 
 @app.delete('/users/{user_id}', response_model=Message)
-async def delete_usuario(user_id: int):
-    if user_id > len(database) or user_id < 1:
+async def delete_usuario(
+    user_id: int,
+    session: Annotated[Session, Depends(get_session)],
+):
+
+    query = select(User).where(User.id == user_id)
+    db_user = session.scalar(query)
+
+    if db_user is None:
         raise HTTPException(status_code=404, detail='User não encontrado')
 
-    del database[user_id - 1]
+    session.delete(db_user)
+    session.commit()
+
     return {'detail': 'User deleted'}

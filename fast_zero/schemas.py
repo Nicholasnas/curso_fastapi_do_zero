@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 
 class UserSchema(BaseModel):
@@ -11,6 +11,9 @@ class UserPublic(BaseModel):
     id: int
     username: str
     email: EmailStr
+    # Reconhecer e trabalho com modelos sqlalchemy
+    # para os usuarios em pydantic seja convertido em sqlalchemy
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserDB(UserSchema):
